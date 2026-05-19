@@ -297,4 +297,5 @@ def editar(nome):
         'editar.html',
         crianca=crianca_encontrada
     )
-app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
