@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Painel Administrativo
+    </title>
+
+    <style>
+
+        body {
+
+            font-family: Arial;
+
+            background-color: #f4f4f4;
+
+            padding: 30px;
+
+            overflow-x: auto;
+        }
+
+        h1 {
+
+            text-align: center;
+
+            color: #2c3e50;
+        }
+
+        h2 {
+
+            color: #3498db;
+        }
+
+        table {
+
+            width: 100%;
+
+            border-collapse: collapse;
+
+            background-color: white;
+
+            margin-top: 20px;
+        }
+
+        th, td {
+
+            border: 1px solid #ccc;
+
+            padding: 10px;
+
+            text-align: center;
+        }
+
+        th {
+
+            background-color: #3498db;
+
+            color: white;
+        }
+
+        tr:nth-child(even) {
+
+            background-color: #f9f9f9;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <h1>
+        Painel Administrativo
+    </h1>
+
+    <h2>
+        Total de inscritos: {{ total }}
+    </h2>
+
+    <table>
+
+        <tr>
+
+            <th>Nome</th>
+
+            <th>Responsável</th>
+
+            <th>Idade</th>
+
+            <th>Igreja</th>
+
+            <th>Telefone</th>
+
+            <th>Ações</th>
+
+        </tr>
+
+        {% for crianca in criancas %}
+
+        <tr>
+
+            <td>{{ crianca[0] }}</td>
+
+            <td>{{ crianca[1] }}</td>
+
+            <td>{{ crianca[2] }}</td>
+
+            <td>{{ crianca[3] }}</td>
+
+            <td>{{ crianca[4] }}</td>
+
+            <td>
+
+                <a href="/editar/{{ crianca[0] }}">
+
+                    Editar
+
+                </a>
+
+                <br><br>
+
+                <a href="/remover/{{ crianca[0] }}">
+                
+
+                    Remover
+
+                </a>
+
+</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+</body>
+
+</html>
