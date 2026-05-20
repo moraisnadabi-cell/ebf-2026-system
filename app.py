@@ -1,3 +1,4 @@
+from database import criar_tabela, conectar
 from flask import (
     Flask,
     render_template,
@@ -6,38 +7,16 @@ from flask import (
     url_for,
     session
 )
-import csv
+
 import os
 
 app = Flask(__name__)
 
+criar_tabela()
+
 app.secret_key = 'ebf2026'
 
-ARQUIVO_CSV = 'dados/criancas.csv'
 
-
-def criar_cabecalho():
-
-    arquivo_existe = os.path.isfile(ARQUIVO_CSV)
-
-    if not arquivo_existe or os.path.getsize(ARQUIVO_CSV) == 0:
-
-        with open(
-            ARQUIVO_CSV,
-            'w',
-            newline='',
-            encoding='utf-8'
-        ) as arquivo:
-
-            writer = csv.writer(arquivo)
-
-            writer.writerow([
-                'nome',
-                'responsavel',
-                'idade',
-                'igreja',
-                'telefone'
-            ])
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -45,11 +24,10 @@ def home():
 
     mensagem = ''
 
-    return redirect(url_for('home'))
 
     if request.method == 'POST':
 
-        criar_cabecalho()
+        
 
         nome = request.form['nome'].title().strip()
 
@@ -82,28 +60,68 @@ def home():
                 mensagem=mensagem
             )
 
-        dados = [
+            
+
+        conexao = conectar()
+
+        cursor = conexao.cursor()
+
+        cursor.execute('''
+            SELECT * FROM criancas
+            WHERE nome = ?
+            AND telefone = ?
+        ''', (
+            nome,
+            telefone
+        ))
+
+        crianca_existente = cursor.fetchone()
+
+        if crianca_existente:
+
+            conexao.close()
+
+            mensagem = 'Essa criança já foi cadastrada.'
+
+            return render_template(
+                'index.html',
+                mensagem=mensagem
+            )
+
+        cursor.execute('''
+                INSERT INTO criancas (
+                nome,
+                responsavel,
+                idade,
+                igreja,
+                telefone
+            )
+
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
             nome,
             responsavel,
             idade,
             igreja,
             telefone
-        ]
+        ))
 
-        with open(
-            ARQUIVO_CSV,
-            'a',
-            newline='',
-            encoding='utf-8'
-        ) as arquivo:
+        conexao.commit()
 
-            writer = csv.writer(arquivo)
+        conexao.close()
 
-            writer.writerow(dados)
+        mensagem = 'Cadastro realizado com sucesso!'
 
-            mensagem = 'Cadastro realizado com sucesso!'
+        return render_template(
+            'index.html',
+            mensagem=mensagem
+        )
 
-    return render_template('index.html')
+    return render_template(
+        'index.html',
+        mensagem=mensagem
+    )
+
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -140,27 +158,15 @@ def admin():
 
         return redirect(url_for('login'))
 
-    criancas = []
+    conexao = conectar()
 
-    try:
+    cursor = conexao.cursor()
 
-        with open(
-            ARQUIVO_CSV,
-            'r',
-            encoding='utf-8'
-        ) as arquivo:
+    cursor.execute('SELECT * FROM criancas')
 
-            leitor = csv.reader(arquivo)
+    criancas = cursor.fetchall()
 
-            next(leitor)
-
-            for linha in leitor:
-
-                criancas.append(linha)
-
-    except FileNotFoundError:
-
-        pass
+    conexao.close()
 
     total = len(criancas)
 
@@ -170,51 +176,50 @@ def admin():
         total=total
     )
 
-@app.route('/remover/<nome>')
-def remover(nome):
+@app.route('/remover/<int:id>')
+def remover(id):
 
     if not session.get('admin_logado'):
-
         return redirect(url_for('login'))
 
-    linhas_atualizadas = []
+    conexao = conectar()
+    cursor = conexao.cursor()
 
-    try:
+    if request.method == 'POST':
 
-        with open(
-            ARQUIVO_CSV,
-            'r',
-            encoding='utf-8'
-        ) as arquivo:
+        cursor.execute('''
+            UPDATE criancas
+            SET nome = ?,
+                responsavel = ?,
+                idade = ?,
+                igreja = ?,
+                telefone = ?
+            WHERE id = ?
+        ''', (
+            request.form['nome'],
+            request.form['responsavel'],
+            request.form['idade'],
+            request.form['igreja'],
+            request.form['telefone'],
+            id
+        ))
 
-            leitor = csv.reader(arquivo)
 
-            cabecalho = next(leitor)
+        conexao.commit()
+        conexao.close()
 
-            linhas_atualizadas.append(cabecalho)
+        return redirect(url_for('admin'))
+    
+    cursor.execute('SELECT * FROM criancas WHERE id = ?', (id,))
+    crianca = cursor.fetchone()
 
-            for linha in leitor:
+    conexao.close()
 
-                if linha[0] != nome:
+    return render_template('editar.html', crianca=crianca)
 
-                    linhas_atualizadas.append(linha)
 
-        with open(
-            ARQUIVO_CSV,
-            'w',
-            newline='',
-            encoding='utf-8'
-        ) as arquivo:
 
-            writer = csv.writer(arquivo)
-
-            writer.writerows(linhas_atualizadas)
-
-    except FileNotFoundError:
-
-        pass
-
-    return redirect(url_for('admin'))
+    
 
 @app.route('/editar/<nome>', methods=['GET', 'POST'])
 def editar(nome):
@@ -223,78 +228,56 @@ def editar(nome):
 
         return redirect(url_for('login'))
 
-    crianca_encontrada = None
-
-    linhas_atualizadas = []
-
-    try:
-
-        with open(
-            ARQUIVO_CSV,
-            'r',
-            encoding='utf-8'
-        ) as arquivo:
-
-            leitor = csv.reader(arquivo)
-
-            cabecalho = next(leitor)
-
-            for linha in leitor:
-
-                if linha[0] == nome:
-
-                    crianca_encontrada = linha
-
-                linhas_atualizadas.append(linha)
-
-    except FileNotFoundError:
-
-        return redirect(url_for('admin'))
+    conexao = conectar()
+    cursor = conexao.cursor()
 
     if request.method == 'POST':
 
         novo_nome = request.form['nome']
-
         novo_responsavel = request.form['responsavel']
-
         nova_idade = request.form['idade']
-
         nova_igreja = request.form['igreja']
-
         novo_telefone = request.form['telefone']
 
-        novas_linhas = [cabecalho]
+        cursor.execute('''
+            UPDATE criancas
+            SET nome = ?,
+                responsavel = ?,
+                idade = ?,
+                igreja = ?,
+                telefone = ?
+            WHERE nome = ?
+        ''', (
+            novo_nome,
+            novo_responsavel,
+            nova_idade,
+            nova_igreja,
+            novo_telefone,
+            nome
+        ))
 
-        for linha in linhas_atualizadas:
-
-            if linha[0] == nome:
-
-                linha = [
-                    novo_nome,
-                    novo_responsavel,
-                    nova_idade,
-                    nova_igreja,
-                    novo_telefone
-                ]
-
-            novas_linhas.append(linha)
-
-        with open(
-            ARQUIVO_CSV,
-            'w',
-            newline='',
-            encoding='utf-8'
-        ) as arquivo:
-
-            writer = csv.writer(arquivo)
-
-            writer.writerows(novas_linhas)
+        conexao.commit()
+        conexao.close()
 
         return redirect(url_for('admin'))
 
-    return render_template(
-        'editar.html',
-        crianca=crianca_encontrada
-    )
+    cursor.execute('''
+        SELECT * FROM criancas
+        WHERE nome = ?
+    ''', (nome,))
+
+    crianca = cursor.fetchone()
+
+    conexao.close()
+
+    return render_template('editar.html', crianca=crianca)
+    
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    porta = int(os.environ.get('PORT', 5000))
+
+    app.run(
+        host='0.0.0.0',
+        port=porta
+    )
