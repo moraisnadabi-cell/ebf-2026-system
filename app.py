@@ -45,6 +45,8 @@ def home():
 
     mensagem = ''
 
+    return redirect(url_for('home'))
+
     if request.method == 'POST':
 
         criar_cabecalho()
@@ -101,10 +103,7 @@ def home():
 
             mensagem = 'Cadastro realizado com sucesso!'
 
-    return render_template(
-    'index.html',
-    mensagem=mensagem
-)
+    return render_template('index.html')
 
 
 @app.route('/login', methods=['GET', 'POST'])
