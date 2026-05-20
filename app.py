@@ -185,39 +185,12 @@ def remover(id):
     conexao = conectar()
     cursor = conexao.cursor()
 
-    if request.method == 'POST':
+    cursor.execute('DELETE FROM criancas WHERE id = ?', (id,))
 
-        cursor.execute('''
-            UPDATE criancas
-            SET nome = ?,
-                responsavel = ?,
-                idade = ?,
-                igreja = ?,
-                telefone = ?
-            WHERE id = ?
-        ''', (
-            request.form['nome'],
-            request.form['responsavel'],
-            request.form['idade'],
-            request.form['igreja'],
-            request.form['telefone'],
-            id
-        ))
-
-
-        conexao.commit()
-        conexao.close()
-
-        return redirect(url_for('admin'))
-    
-    cursor.execute('SELECT * FROM criancas WHERE id = ?', (id,))
-    crianca = cursor.fetchone()
-
+    conexao.commit()
     conexao.close()
 
-    return render_template('editar.html', crianca=crianca)
-
-
+    return redirect(url_for('admin'))
 
     
 
