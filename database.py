@@ -3,9 +3,10 @@ from sqlalchemy import create_engine, text
 
 _url = os.environ.get('DATABASE_URL', 'sqlite:///ebf.db').strip()
 
-# Render fornece 'postgres://', SQLAlchemy exige 'postgresql://'
-if _url.startswith('postgres://') and not _url.startswith('postgresql://'):
-    _url = 'postgresql://' + _url[len('postgres://'):]
+# Normaliza URL para usar psycopg3 no PostgreSQL (suporta Python 3.14)
+if _url.startswith('postgresql://') or _url.startswith('postgres://'):
+    host_part = _url.split('://', 1)[1]
+    _url = 'postgresql+psycopg://' + host_part
 
 engine = create_engine(_url)
 _is_postgres = _url.startswith('postgresql')
