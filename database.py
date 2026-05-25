@@ -1,36 +1,38 @@
-import sqlite3
+import os
+from sqlalchemy import create_engine, text
 
+_url = os.environ.get('DATABASE_URL', 'sqlite:///ebf.db')
 
-def conectar():
+# Render fornece 'postgres://', SQLAlchemy exige 'postgresql://'
+if _url.startswith('postgres://'):
+    _url = _url.replace('postgres://', 'postgresql://', 1)
 
-    conexao = sqlite3.connect('ebf.db')
-
-    return conexao
+engine = create_engine(_url)
+_is_postgres = _url.startswith('postgresql')
 
 
 def criar_tabela():
-
-    conexao = conectar()
-
-    cursor = conexao.cursor()
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS criancas (
-
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-            nome TEXT NOT NULL,
-
-            responsavel TEXT NOT NULL,
-
-            idade TEXT NOT NULL,
-
-            igreja TEXT NOT NULL,
-
-            telefone TEXT NOT NULL
-        )
-    ''')
-
-    conexao.commit()
-
-    conexao.close()
+    with engine.connect() as conn:
+        if _is_postgres:
+            conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS criancas (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    responsavel TEXT NOT NULL,
+                    idade TEXT NOT NULL,
+                    igreja TEXT NOT NULL,
+                    telefone TEXT NOT NULL
+                )
+            '''))
+        else:
+            conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS criancas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT NOT NULL,
+                    responsavel TEXT NOT NULL,
+                    idade TEXT NOT NULL,
+                    igreja TEXT NOT NULL,
+                    telefone TEXT NOT NULL
+                )
+            '''))
+        conn.commit()
