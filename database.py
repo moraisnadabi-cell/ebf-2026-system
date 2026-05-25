@@ -1,11 +1,11 @@
 import os
 from sqlalchemy import create_engine, text
 
-_url = os.environ.get('DATABASE_URL', 'sqlite:///ebf.db')
+_url = os.environ.get('DATABASE_URL', 'sqlite:///ebf.db').strip()
 
 # Render fornece 'postgres://', SQLAlchemy exige 'postgresql://'
-if _url.startswith('postgres://'):
-    _url = _url.replace('postgres://', 'postgresql://', 1)
+if _url.startswith('postgres://') and not _url.startswith('postgresql://'):
+    _url = 'postgresql://' + _url[len('postgres://'):]
 
 engine = create_engine(_url)
 _is_postgres = _url.startswith('postgresql')
